@@ -17,7 +17,7 @@ func requestHandle(connInterface *Conn) {
 	defer func() {
 		err := connInterface.Conn.Close()
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
 	}()
 	reader := bufio.NewReader(connInterface.Conn)
@@ -32,7 +32,7 @@ func requestHandle(connInterface *Conn) {
 		var message Message
 		err := json.Unmarshal(request, &message)
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
 		if len(message.Data) > 0 {
 			fmt.Println("Command from " + connInterface.GetRemoteAddr() + ": " + message.Data)
@@ -42,10 +42,17 @@ func requestHandle(connInterface *Conn) {
 				response := handler(connInterface, splittedCommand[1:])
 				_, err = writer.Write(response)
 				if err != nil {
-					panic(err)
+					fmt.Println(err)
 				}
 			} else {
-
+				errorResponse, err := GetErrorResponse()
+				if err != nil {
+					fmt.Println(err)
+				}
+				_, err = writer.Write(errorResponse)
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
 			_ = writer.Flush()
 		}

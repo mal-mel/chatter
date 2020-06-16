@@ -18,6 +18,10 @@ var CommandInterfaces = map[string]handlersType {
 }
 
 
+func GetErrorResponse() ([] byte, error) {
+	return json.Marshal(&Message{"response", 400, "Error"})
+}
+
 func helpCommandHandler(connInterface *Conn, args []string) []byte {
 	bJson, err := json.Marshal(&Message{"response", 200, HelpDescription})
 	if err != nil {
