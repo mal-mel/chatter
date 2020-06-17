@@ -54,10 +54,15 @@ func main() {
 			fmt.Println(err)
 		}
 		if len(data) > 1 {
-			bJson := makeMessage(data)
-			response := getResponse(scanner, serverWriter, bJson)
-			if len(response.Data) != 0 {
-				fmt.Println(response.Data)
+			if handler, ok := CommandInterfaces[data]; ok {
+				bJson := makeMessage(data)
+				handler(scanner, serverWriter, bJson)
+			} else {
+				bJson := makeMessage(data)
+				response := getResponse(scanner, serverWriter, bJson)
+				if len(response.Data) != 0 {
+					fmt.Println(response.Data)
+				}
 			}
 		}
 	}
