@@ -10,7 +10,8 @@ import (
 )
 
 
-var ConnectionsInterfaces = make(map[string]*InterfaceData)
+var ConnectionsInterfacesAddr = make(map[string]*InterfaceData)
+var ConnectionsInterfacesId = make(map[int]*InterfaceData)
 
 
 func requestHandle(connInterface *Conn) {
@@ -68,7 +69,8 @@ func initConnectionInterface(mainConn net.Conn) *Conn {
 	_ = connInterface.SetDeadline(time.Now().Add(connInterface.IdleTimeout))
 	id := GetFreeId()
 	clientAddr := connInterface.GetRemoteAddr()
-	ConnectionsInterfaces[clientAddr] = &InterfaceData{id, connInterface}
+	ConnectionsInterfacesAddr[clientAddr] = &InterfaceData{id, connInterface}
+	ConnectionsInterfacesId[id] = &InterfaceData{id, connInterface}
 	fmt.Println("Update interfaces: ", CommandInterfaces)
 	return connInterface
 }
