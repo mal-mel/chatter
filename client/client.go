@@ -38,6 +38,18 @@ func getResponse(scanner *bufio.Scanner, serverWriter *bufio.Writer, bJson []byt
 	return messageStruct
 }
 
+func serverCommandHandler(scanner *bufio.Scanner, serverWriter *bufio.Writer) {
+	var messageStruct Message
+	for {
+		_ = scanner.Scan()
+		err := json.Unmarshal(scanner.Bytes(), &messageStruct)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(messageStruct)
+	}
+}
+
 func main() {
 	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
@@ -46,6 +58,7 @@ func main() {
 	serverReader := bufio.NewReader(conn)
 	serverWriter := bufio.NewWriter(conn)
 	scanner := bufio.NewScanner(serverReader)
+	go serverCommandHandler(scanner, serverWriter)
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("chatter -> ")

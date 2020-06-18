@@ -19,8 +19,13 @@ var CommandInterfaces = map[string]handlersType {
 }
 
 
-func GetErrorResponse() ([] byte, error) {
-	return json.Marshal(&Message{"response", 400, "Error"})
+func GetErrorResponse() [] byte {
+	response, err := json.Marshal(&Message{"response", 400, "Error"})
+	if err != nil {
+		fmt.Println(err)
+	}
+	response = append(response, "\n"...)
+	return response
 }
 
 func helpCommandHandler(connInterface *Conn, args []string) []byte {
@@ -76,37 +81,37 @@ func getOnlineIds(connInterface *Conn) []string {
 
 func chatCommandHandler(connInterface *Conn, args []string) []byte {
 	if len(args) > 0 {
-		argsId, err := strconv.Atoi(args[0])
+		c2Id, err := strconv.Atoi(args[0])
 		if err != nil {
 			fmt.Println(err)
 		}
-		if c2Data, ok := ConnectionsInterfacesId[argsId]; ok {
+		if c2Data, ok := ConnectionsInterfacesId[c2Id]; ok {
 			if c1Data, ok := ConnectionsInterfacesAddr[connInterface.GetRemoteAddr()]; ok {
-				bJson, err := json.Marshal(&Message{"response", 200, "accept_" + strconv.Itoa(c1Data.id)})
-				if err != nil {
-					fmt.Println(err)
-				}
-				_, err = c2Data.conn.Write(bJson)
-				if err != nil {
-					fmt.Println(err)
-				}
-				var buff []byte
-				var responseC2 Message
-				_, err = c2Data.conn.Read(buff)
-				if err != nil {
-					fmt.Println(err)
-				}
-				err = json.Unmarshal(buff, &responseC2)
-				buff = nil
-				if responseC2.Code == 200 {
-					return buff
+				if c1Data.id != c2Data.id {
+					bJson, err := json.Marshal(&Message{CurrentId, "response", 200, "accept_" + strconv.Itoa(c1Data.id)})
+					CurrentId++
+					if err != nil {
+						fmt.Println(err)
+					}
+					bJson = append(bJson, "\n"...)
+					_, err = c2Data.conn.Write(bJson)
+					if err != nil {
+						fmt.Println(err)
+					}
+					var buff []byte
+					var responseC2 Message
+					_, err = c2Data.conn.Read(buff)
+					if err != nil {
+						fmt.Println(err)
+					}
+					err = json.Unmarshal(buff, &responseC2)
+					buff = nil
+					if responseC2.Code == 200 {
+						return buff
+					}
 				}
 			}
 		}
 	}
-	errorResponse, err := GetErrorResponse()
-	if err != nil {
-		fmt.Println(err)
-	}
-	return errorResponse
+	return GetErrorResponse()
 }

@@ -12,6 +12,7 @@ import (
 
 var ConnectionsInterfacesAddr = make(map[string]*InterfaceData)
 var ConnectionsInterfacesId = make(map[int]*InterfaceData)
+var CurrentId = 1
 
 
 func requestHandle(connInterface *Conn) {
@@ -46,11 +47,7 @@ func requestHandle(connInterface *Conn) {
 					fmt.Println(err)
 				}
 			} else {
-				errorResponse, err := GetErrorResponse()
-				if err != nil {
-					fmt.Println(err)
-				}
-				_, err = writer.Write(errorResponse)
+				_, err = writer.Write(GetErrorResponse())
 				if err != nil {
 					fmt.Println(err)
 				}
