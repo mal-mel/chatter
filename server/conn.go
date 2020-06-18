@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"time"
@@ -12,9 +14,13 @@ type Conn struct {
 	MaxReadBuffer int64
 }
 
-func (connInterface *Conn) Write(p []byte) (int, error) {
+func (connInterface *Conn) Write(p []byte) error {
 	connInterface.updateDeadline()
-	return connInterface.Conn.Write(p)
+	_, err := connInterface.Conn.Write(p)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (connInterface *Conn) Read(b []byte) (int, error) {
@@ -40,4 +46,15 @@ func (connInterface *Conn) GetRemoteAddr() string {
 type InterfaceData struct {
 	id int
 	conn *Conn
+}
+
+func (i *InterfaceData) GetClientResponse() (int, []byte) {
+	var buff []byte
+	var response Response
+	_, err := i.conn.Read(buff)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = json.Unmarshal(buff, &response)
+	return response.Code, buff
 }

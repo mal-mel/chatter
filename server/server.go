@@ -12,7 +12,6 @@ import (
 
 var ConnectionsInterfacesAddr = make(map[string]*InterfaceData)
 var ConnectionsInterfacesId = make(map[int]*InterfaceData)
-var CurrentId = 1
 
 
 func requestHandle(connInterface *Conn) {
@@ -23,36 +22,60 @@ func requestHandle(connInterface *Conn) {
 		}
 	}()
 	reader := bufio.NewReader(connInterface.Conn)
-	writer := bufio.NewWriter(connInterface.Conn)
 	scanner := bufio.NewScanner(reader)
 	for {
 		scanned := scanner.Scan()
 		if !scanned {
 			break
 		}
-		request := scanner.Bytes()
-		var message Message
-		err := json.Unmarshal(request, &message)
+		bData := scanner.Bytes()
+		structType := GetStructType(bData)
+		if structType == "response" {
+			var responseStruct Response
+			err := json.Unmarshal(bData, &responseStruct)
+			if err != nil {
+				fmt.Println(err)
+			}
+			responseHandler(&responseStruct, connInterface)
+		} else if structType == "command" {
+			var commandStruct Command
+			err := json.Unmarshal(bData, &commandStruct)
+			if err != nil {
+				fmt.Println(err)
+			}
+			commandHandler(&commandStruct, connInterface)
+		}
+	}
+}
+
+func responseHandler(responseStruct *Response, connInterface *Conn) {
+	if len(responseStruct.Data) > 0 {
+		fmt.Println("Command from " + connInterface.GetRemoteAddr() + ": " + responseStruct.Data)
+		splittedCommand := strings.Split(responseStruct.Data, " ")
+		clientCommand := splittedCommand[0]
+		if handler, ok := CommandInterfaces[clientCommand]; ok {
+			response := handler(connInterface, splittedCommand[1:])
+			err := connInterface.Write(response)
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			err := connInterface.Write(GetErrorResponse())
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+}
+
+func commandHandler(commandStruct *Command, connInterface *Conn) {
+	if commandStruct.Code == 200 {
+		RemoveId(commandStruct.Id)
+	} else {
+		bJson := MakeJson(&commandStruct)
+		err := connInterface.Write(bJson)
 		if err != nil {
 			fmt.Println(err)
-		}
-		if len(message.Data) > 0 {
-			fmt.Println("Command from " + connInterface.GetRemoteAddr() + ": " + message.Data)
-			splittedCommand := strings.Split(message.Data, " ")
-			clientCommand := splittedCommand[0]
-			if handler, ok := CommandInterfaces[clientCommand]; ok {
-				response := handler(connInterface, splittedCommand[1:])
-				_, err = writer.Write(response)
-				if err != nil {
-					fmt.Println(err)
-				}
-			} else {
-				_, err = writer.Write(GetErrorResponse())
-				if err != nil {
-					fmt.Println(err)
-				}
-			}
-			_ = writer.Flush()
 		}
 	}
 }
@@ -64,7 +87,7 @@ func initConnectionInterface(mainConn net.Conn) *Conn {
 		MaxReadBuffer: BuffSize,
 	}
 	_ = connInterface.SetDeadline(time.Now().Add(connInterface.IdleTimeout))
-	id := GetFreeId()
+	id := GetFreeUserId()
 	clientAddr := connInterface.GetRemoteAddr()
 	ConnectionsInterfacesAddr[clientAddr] = &InterfaceData{id, connInterface}
 	ConnectionsInterfacesId[id] = &InterfaceData{id, connInterface}
@@ -84,7 +107,10 @@ func main() {
 		}
 		connInterface := initConnectionInterface(client)
 		fmt.Println("Connect from: " + connInterface.GetRemoteAddr())
-		connInterface.SetDeadline(time.Now().Add(connInterface.IdleTimeout))
+		err = connInterface.SetDeadline(time.Now().Add(connInterface.IdleTimeout))
+		if err != nil {
+			fmt.Println(err)
+		}
 		go requestHandle(connInterface)
 	}
 }
