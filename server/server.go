@@ -76,7 +76,7 @@ func initConnectionInterface(mainConn net.Conn) *Conn {
 }
 
 func main() {
-	listen, err := net.Listen("tcp", "localhost:8080")
+	listen, err := net.Listen("tcp", Address + Port)
 	if err != nil {
 		fmt.Println("Cant start server")
 	}
